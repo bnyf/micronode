@@ -1,5 +1,5 @@
 idf_component_register(SRCS "main.c"
-                       INCLUDE_DIRS "" 
+                       INCLUDE_DIRS "." 
 		       PRIV_INCLUDE_DIRS "${JERRYSCRIPT_SOURCE}/jerry-core/include" "${JERRYSCRIPT_SOURCE}/jerry-ext/include" "${JERRYSCRIPT_SOURCE}/jerry-port/default/include")
 
 # Xtensa processor architecture optimization
