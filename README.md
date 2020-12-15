@@ -1,2 +1,2 @@
 # micronode
-esp32 JavaScript runtime.
+FreeRTOS JavaScript runtime.
