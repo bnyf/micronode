@@ -1,2 +1,2 @@
 # micronode
-FreeRTOS JavaScript runtime.
+Embedded JavaScript runtime.
