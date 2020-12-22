@@ -1,8 +1,1 @@
-*
-!.gitignore
-!.gitmodules
-!main
-!CMakeLists.txt
-!README.md
-!partitions.csv
-
+.DS_Store
