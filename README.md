@@ -1,2 +1,0 @@
-# micronode
-Embedded JavaScript runtime.
