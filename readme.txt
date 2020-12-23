@@ -1,3 +1,3 @@
-Micronode.js is a JavaScript runtime built on JerryScript engine.
+Micronode.js is an IoT JavaScript runtime built on JerryScript engine.
 
 Only for esp-idf now.
