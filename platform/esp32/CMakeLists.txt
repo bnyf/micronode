@@ -2,7 +2,7 @@
 # CMakeLists in this exact order for cmake to work correctly
 cmake_minimum_required(VERSION 3.5)
 
-set(JERRYSCRIPT_SOURCE "${CMAKE_SOURCE_DIR}/deps/jerryscript")
+set(JERRYSCRIPT_SOURCE "${CMAKE_SOURCE_DIR}/../deps/jerryscript")
 
 # JerryScript setting here
 set(JERRY_GLOBAL_HEAP_SIZE "(128)")
