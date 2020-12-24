@@ -1,7 +1,2 @@
-*
-!.gitignore
-!CmakeLists.txt
-!component.mk
-!*.c
-!*.h
-!Kconfig.projbuild
+src
+tmp
