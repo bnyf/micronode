@@ -2,11 +2,11 @@
 # CMakeLists in this exact order for cmake to work correctly
 cmake_minimum_required(VERSION 3.5)
 
-set(JERRYSCRIPT_SOURCE "${CMAKE_SOURCE_DIR}/../../deps/jerryscript")
+set(JERRYSCRIPT_SOURCE "$ENV{MICRONODE}/deps/jerryscript")
 
 # JerryScript setting here
 set(JERRY_GLOBAL_HEAP_SIZE "(128)")
 set(EXTRA_COMPONENT_DIRS $ENV{IDF_PATH}/examples/common_components/protocol_examples_common)
 
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
-project(hello-world)
+project(micronode)

@@ -1,6 +1,7 @@
-idf_component_register(SRCS "main.c"
-                       INCLUDE_DIRS "." 
-		       PRIV_INCLUDE_DIRS "${JERRYSCRIPT_SOURCE}/jerry-core/include" "${JERRYSCRIPT_SOURCE}/jerry-ext/include" "${JERRYSCRIPT_SOURCE}/jerry-port/default/include")
+idf_component_register( SRC_DIRS "." "../port" "$ENV{MICRONODE}/libs/module"
+                        INCLUDE_DIRS "." 
+                        PRIV_INCLUDE_DIRS "${JERRYSCRIPT_SOURCE}/jerry-core/include" "${JERRYSCRIPT_SOURCE}/jerry-ext/include" "${JERRYSCRIPT_SOURCE}/jerry-port/default/include"
+                        "$ENV{MICRONODE}/libs/module" "$ENV{MICRONODE}/libs/port")
 
 # Xtensa processor architecture optimization
 set(EXTERNAL_COMPILE_FLAGS -ffunction-sections -fdata-sections -fstrict-volatile-bitfields -mlongcalls -nostdlib -w)
@@ -14,6 +15,7 @@ externalproject_add(jerryscript_build
   INSTALL_COMMAND "" # Do not install to host
   LIST_SEPARATOR | # Use the alternate list separator
   CMAKE_ARGS
+    -DJERRY_LOGGING=ON
     -DJERRY_GLOBAL_HEAP_SIZE=${JERRY_GLOBAL_HEAP_SIZE}
     -DJERRY_CMDLINE=OFF
     -DENABLE_LTO=OFF # FIXME: This option must be turned off or the cross-compiler settings will be overwritten

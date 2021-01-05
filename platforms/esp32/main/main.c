@@ -6,29 +6,34 @@
 #include "sdkconfig.h"
 #include "esp_err.h"
 #include "esp_spiffs.h"
-
 #include "esp_wifi.h"
 #include "esp_system.h"
 #include "nvs_flash.h"
 #include "esp_event.h"
 #include "esp_netif.h"
+#include "esp_log.h"
 #include "protocol_examples_common.h"
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/semphr.h"
 #include "freertos/queue.h"
+#include "freertos/event_groups.h"
 
 #include "lwip/sockets.h"
 #include "lwip/dns.h"
 #include "lwip/netdb.h"
+#include "lwip/err.h"
+#include "lwip/sys.h"
 
-#include "esp_log.h"
 #include "mqtt_client.h"
-
 
 #include "jerryscript.h"
 #include "jerryscript-ext/handler.h"
+
+#include "init.h"
+
+#include "mnode_require.h"
 
 #ifdef CONFIG_IDF_TARGET_ESP32
 #define CHIP_NAME "ESP32"
@@ -38,43 +43,57 @@
 #define CHIP_NAME "ESP32-S2 Beta"
 #endif
 
-#define MAX_CODE_LENGTH 1024
-static const char *TAG = "example";
+static const char *TAG = "main";
 
-jerry_char_t script[MAX_CODE_LENGTH] = { "var x = 7; \
-var y = 4; \
-function add(x, y) \
-{ return x+y }; \
-print(add(x,y));" };
+typedef struct xSemaphoreGroup_s {
+    SemaphoreHandle_t code;
+    SemaphoreHandle_t file;
+}xSemaphoreGroup_t;
 
-// jerry_char_t script[MAX_CODE_LENGTH] = { "print ('hello micronode')" };
+xSemaphoreGroup_t semagroup;
+jerry_char_t script[MAX_CODE_LENGTH];
+size_t script_size;
+// jerry_char_t default_script[] = "var str = 'Hello, World!';"; 
+// jerry_char_t default_script[] = "print ('micronode');"; 
 
-SemaphoreHandle_t xSemaphore;
+const char *entry = "/framework/index.js";
 
-void jerry_ext_handler_init() {
+static void resource_init() {
+    // mempcpy(script, default_script, sizeof(default_script));
+    // script_size = sizeof(default_script) - 1;
+    vSemaphoreCreateBinary( semagroup.code );
+    vSemaphoreCreateBinary( semagroup.file );
+}
+
+// jerry
+static void jerry_ext_handler_init() {
   jerryx_handler_register_global ((const jerry_char_t *) "print",
                                   jerryx_handler_print);
 }
+static void store_js_code(const char* js_code, int length) {
 
-void store_js_code(const char* js_code, int length) {
-    // Use POSIX and C standard library functions to work with files.
-    // First create a file.
     ESP_LOGI(TAG, "Opening file");
-    FILE* f = fopen("/spiffs/js.txt", "w");
+    FILE* f = fopen(entry, "w");
     if (f == NULL) {
         ESP_LOGE(TAG, "Failed to open file for writing");
         return;
     }
-    fprintf(f, "%.*s\n",length, js_code);
+    if(xSemaphoreTake(semagroup.file, ( TickType_t ) 10 ) == pdTRUE) {
+        fprintf(f, "%.*s\n",length, js_code);
+        xSemaphoreGive(semagroup.file);
+    }
     fclose(f);
     ESP_LOGI(TAG, "File written");
 
-    mempcpy(script, js_code, length);
-    script[length] = 0;
-
+    if( xSemaphoreTake( semagroup.code, ( TickType_t ) 10 ) == pdTRUE ) {
+        mempcpy(script, js_code, length);
+        script_size = length;
+        xSemaphoreGive( semagroup.code);
+    }
+    
 }
 
-static esp_err_t mqtt_event_handler_cb(esp_mqtt_event_handle_t event)
+static esp_err_t esp_mqtt_event_handler_cb(esp_mqtt_event_handle_t event)
 {
     esp_mqtt_client_handle_t client = event->client;
     int msg_id;
@@ -82,8 +101,7 @@ static esp_err_t mqtt_event_handler_cb(esp_mqtt_event_handle_t event)
     switch (event->event_id) {
         case MQTT_EVENT_CONNECTED:
             ESP_LOGI(TAG, "MQTT_EVENT_CONNECTED");
-            // "/code/qos2"
-            msg_id = esp_mqtt_client_subscribe(client, "/code/qos2", 0);
+            msg_id = esp_mqtt_client_subscribe(client, "code", 2);
             ESP_LOGI(TAG, "sent subscribe successful, msg_id=%d", msg_id);
             break;
         case MQTT_EVENT_DISCONNECTED:
@@ -92,7 +110,7 @@ static esp_err_t mqtt_event_handler_cb(esp_mqtt_event_handle_t event)
 
         case MQTT_EVENT_SUBSCRIBED:
             ESP_LOGI(TAG, "MQTT_EVENT_SUBSCRIBED, msg_id=%d", event->msg_id);
-            // msg_id = esp_mqtt_client_publish(client, "/topic/qos0", "print ('data')", 0, 0, 0);
+            // msg_id = esp_mqtt_client_publish(client, "code", "print ('data')", 0, 0, 0);
             // ESP_LOGI(TAG, "sent publish successful, msg_id=%d", msg_id);
             break;
         case MQTT_EVENT_UNSUBSCRIBED:
@@ -116,17 +134,43 @@ static esp_err_t mqtt_event_handler_cb(esp_mqtt_event_handle_t event)
     }
     return ESP_OK;
 }
-
-static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_t event_id, void *event_data) {
+static void esp_mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_t event_id, void *event_data) {
     ESP_LOGD(TAG, "Event dispatched from event loop base=%s, event_id=%d", base, event_id);
-    mqtt_event_handler_cb(event_data);
+    esp_mqtt_event_handler_cb(event_data);
 }
 
-static void mqtt_app_start(void)
-{
+void start_jerry() {
+    jerry_init(JERRY_INIT_EMPTY);
+    jerry_ext_handler_init();
+    mnode_init_require();
+}
+void end_jerry() {
+    jerry_cleanup();
+}
+
+void net_init() {
+    esp_log_level_set("*", ESP_LOG_INFO);
+    esp_log_level_set("MQTT_CLIENT", ESP_LOG_VERBOSE);
+    esp_log_level_set("MQTT_EXAMPLE", ESP_LOG_VERBOSE);
+    esp_log_level_set("TRANSPORT_TCP", ESP_LOG_VERBOSE);
+    esp_log_level_set("TRANSPORT_SSL", ESP_LOG_VERBOSE);
+    esp_log_level_set("TRANSPORT", ESP_LOG_VERBOSE);
+    esp_log_level_set("OUTBOX", ESP_LOG_VERBOSE);
+    
+    ESP_ERROR_CHECK(nvs_flash_init());
+    ESP_ERROR_CHECK(esp_netif_init());
+    ESP_ERROR_CHECK(esp_event_loop_create_default());
+    /* This helper function configures Wi-Fi or Ethernet, as selected in menuconfig.
+     * Read "Establishing Wi-Fi or Ethernet Connection" section in
+     * examples/protocols/README.md for more information about this function.
+     */
+    ESP_ERROR_CHECK(example_connect());
+}
+
+void start_mqtt() {
     esp_mqtt_client_config_t mqtt_cfg = {
-        .host = "192.168.3.22",
-        .port = 1883
+        .host = MQTT_HOST,
+        .port = MQTT_PORT
     };
 #if CONFIG_BROKER_URL_FROM_STDIN
     char line[128];
@@ -154,17 +198,18 @@ static void mqtt_app_start(void)
 #endif /* CONFIG_BROKER_URL_FROM_STDIN */
 
     esp_mqtt_client_handle_t client = esp_mqtt_client_init(&mqtt_cfg);
-    esp_mqtt_client_register_event(client, ESP_EVENT_ANY_ID, mqtt_event_handler, client);
+    esp_mqtt_client_register_event(client, ESP_EVENT_ANY_ID, esp_mqtt_event_handler, client);
     esp_mqtt_client_start(client);
 }
 
+// vfs
 void vfs_init() {
     /* vfs */
     ESP_LOGI(TAG, "Initializing SPIFFS");
     esp_vfs_spiffs_conf_t conf = {
-        .base_path = "/spiffs",
+        .base_path = "/framework",
         .partition_label = NULL,
-        .max_files = 5,
+        .max_files = 3,
         .format_if_mount_failed = true
     };
 
@@ -191,120 +236,73 @@ void vfs_init() {
         ESP_LOGI(TAG, "Partition size: total: %d, used: %d", total, used);
     }
 
+    // if file doesn't exists, create it.
+    // struct stat st;
+    // if (stat(entry, &st) != 0) { 
+    //   ESP_LOGI(TAG, "Opening file");
+    //   FILE* f = fopen(entry, "w");
+    //   if (f == NULL) {
+    //       ESP_LOGE(TAG, "Failed to open file for writing");
+    //       return;
+    //   }
+    //   fprintf(f, "%s", default_script);
+    //   fclose(f);
+    //   ESP_LOGI(TAG, "File written");
+    // }
+}
+void load_js_entry() {
+    // Open renamed file for reading
+    size_t size = 0;
+    jerry_char_t *buffer = jerry_port_read_source(entry, &size);
+    // ESP_LOGI(TAG, "load_js_entry, buffer: '%s'", (char*)buffer);
+    // ESP_LOGI(TAG, "load_js_entry, buffer size: '%u'", size);
+    if (buffer == NULL) {
+        printf("No such file: %s\n",entry);
+        return;
+    }
+    
+    if( xSemaphoreTake( semagroup.code, ( TickType_t ) 10 ) == pdTRUE ) {
+        mempcpy(script, buffer, size);
+        script_size = size;
+        xSemaphoreGive( semagroup.code );
+    }
+    // ESP_LOGI(TAG, "load_js_entry, script: '%s'", (char*)script);
+    
+    jerry_port_release_source(buffer);
 }
 
-void mqtt_init() {
-    /* mqtt */
-    ESP_LOGI(TAG, "[APP] Startup..");
-    ESP_LOGI(TAG, "[APP] Free memory: %d bytes", esp_get_free_heap_size());
-    ESP_LOGI(TAG, "[APP] IDF version: %s", esp_get_idf_version());
+void init() {
+    resource_init();
+    
+    // net_init();
+    // start_mqtt();
 
-    esp_log_level_set("*", ESP_LOG_INFO);
-    esp_log_level_set("MQTT_CLIENT", ESP_LOG_VERBOSE);
-    esp_log_level_set("MQTT_EXAMPLE", ESP_LOG_VERBOSE);
-    esp_log_level_set("TRANSPORT_TCP", ESP_LOG_VERBOSE);
-    esp_log_level_set("TRANSPORT_SSL", ESP_LOG_VERBOSE);
-    esp_log_level_set("TRANSPORT", ESP_LOG_VERBOSE);
-    esp_log_level_set("OUTBOX", ESP_LOG_VERBOSE);
-
-    ESP_ERROR_CHECK(nvs_flash_init());
-    ESP_ERROR_CHECK(esp_netif_init());
-    ESP_ERROR_CHECK(esp_event_loop_create_default());
-}
-
-void rw_file() {
-    /* rw file */
-    //Check if destination file exists before renaming
-    struct stat st;
-    if (stat("/spiffs/js.txt", &st) != 0) {
-      // Use POSIX and C standard library functions to work with files.
-      // First create a file.
-      ESP_LOGI(TAG, "Opening file");
-      FILE* f = fopen("/spiffs/js.txt", "w");
-      if (f == NULL) {
-          ESP_LOGE(TAG, "Failed to open file for writing");
-          return;
-      }
-      fprintf(f, "%s", script);
-      fclose(f);
-      ESP_LOGI(TAG, "File written");
-    }
-    else {
-      // Open renamed file for reading
-      ESP_LOGI(TAG, "Reading file");
-      FILE* f = fopen("/spiffs/js.txt", "r");
-      if (f == NULL) {
-          ESP_LOGE(TAG, "Failed to open file for reading");
-          return;
-      }
-      char line[64];
-      memset(line, 0 ,sizeof(line));
-      fgets(line, sizeof(line), f);
-      fclose(f);
-
-      // strip newline
-      char* pos = strchr(line, '\n');
-      if (pos) {
-          *pos = '\0';
-      }
-      ESP_LOGI(TAG, "Read from file: '%s'", line);
-
-      if(strlen(line) > 0) {
-        mempcpy(script,line,sizeof(line));
-      }
-      ESP_LOGI(TAG, "Script: '%s'", (char*)script);
-    }
+    vfs_init();
+    load_js_entry();
 }
 
 void app_main(void) {
-    vfs_init();
-    rw_file();
+    init();
 
-    /* This helper function configures Wi-Fi or Ethernet, as selected in menuconfig.
-     * Read "Establishing Wi-Fi or Ethernet Connection" section in
-     * examples/protocols/README.md for more information about this function.
-     */
-    ESP_ERROR_CHECK(example_connect());
-    mqtt_init();
-    mqtt_app_start();
-
-    vSemaphoreCreateBinary( xSemaphore );
-
-    /* Initialize jerryscript engine */
-    jerry_init(JERRY_INIT_EMPTY);
-    jerry_ext_handler_init();
-
+    start_jerry();
     while (true) {
-        if( xSemaphoreTake( xSemaphore, ( TickType_t ) 10 ) == pdTRUE ) {
-            bool ret_value = jerry_run_simple (script, sizeof (script) - 1, JERRY_INIT_EMPTY);
-            if(ret_value) {
-                ESP_LOGI(TAG, "jerry run successfully");
+        if( xSemaphoreTake( semagroup.code, ( TickType_t ) 10 ) == pdTRUE ) {
+            ESP_LOGI(TAG, "script:\n%s", script);
+            ESP_LOGI(TAG, "script lenth: %u", script_size);
+
+            bool run_ok = false;
+
+            run_ok = jerry_eval(script, script_size, JERRY_PARSE_NO_OPTS);
+            if(run_ok) {
+                ESP_LOGI(TAG, "success\n");
+            } else {
+                ESP_LOGI(TAG, "unsuccess\n");
             }
-            else {
-                ESP_LOGI(TAG, "jerry run error");
-            }
-           // We were able to obtain the semaphore and can now access the
-           // shared resource.
 
-           // ...
+            xSemaphoreGive( semagroup.code );
+        }
 
-           // We have finished accessing the shared resource.  Release the
-           // semaphore.
-           xSemaphoreGive( xSemaphore );
-        }   
-
-        // jerry_value_t parsed_code = jerry_parse (NULL, 0, script, strlen((char*)script), JERRY_PARSE_NO_OPTS);
-        // if (jerry_value_is_error(parsed_code)) {
-        //   printf("Unexpected error\n");
-        // } else {
-        //   jerry_value_t ret_value = jerry_run(parsed_code);
-        //   jerry_release_value(ret_value);
-        // }
-        // jerry_release_value(parsed_code);
-        // printf("-------\n");
-        vTaskDelay(5000 / portTICK_PERIOD_MS);
-      }
-
-    /* Cleanup engine */
-    jerry_cleanup();
+        vTaskDelay(10000 / portTICK_PERIOD_MS);
+    }
+    end_jerry();
 }
