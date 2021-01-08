@@ -44,21 +44,31 @@ static jerry_value_t writeSync_handler(const jerry_value_t func_value, /**< func
   mnode_status_e status = mnode_port_gpio_set_level(pin_num, pin_level);
   if (status != MNODE_OK)
   {
-    jerry_port_log(JERRY_LOG_LEVEL_TRACE, "gpio_set_level error!\n");
+    jerry_port_log(JERRY_LOG_LEVEL_ERROR, "gpio_set_level error!\n");
     return jerry_create_boolean(false);
   }
   return jerry_create_boolean(true);
 }
 
-static jerry_value_t readSync_handler(const jerry_value_t func_value, /**< function object */
+static jerry_value_t read_handler(const jerry_value_t func_value, /**< function object */
                                   const jerry_value_t this_value, /**< this arg */
                                   const jerry_value_t args[],     /**< function arguments */
                                   const jerry_length_t args_cnt)  /**< number of function arguments */
 {
   jerry_port_log(JERRY_LOG_LEVEL_DEBUG,"readSync_handler\n");
   int pin_num = (int)jerry_get_number_value(args[0]);
-  int level = mnode_port_gpio_get_level(pin_num);
-  return jerry_create_number((double)level);
+  int level = (int)jerry_get_number_value(args[1]);
+  
+  jerry_value_t ret_val = jerry_call_function (args[2], this_value, NULL, 0);
+
+  if (jerry_value_is_error (ret_val)){
+    jerry_port_log(JERRY_LOG_LEVEL_ERROR, "gpio_set_level error!\n");
+    return jerry_create_boolean(false);
+  }
+
+  jerry_release_value (ret_val);
+
+  return jerry_create_boolean(true);
 }
 
 jerry_value_t mnode_init_gpio()
@@ -84,8 +94,8 @@ jerry_value_t mnode_init_gpio()
   jerry_release_value(prop_name);
   jerry_release_value(value);
 
-  prop_name = jerry_create_string((const jerry_char_t *)"readSync");
-  value = jerry_create_external_function(readSync_handler);
+  prop_name = jerry_create_string((const jerry_char_t *)"read");
+  value = jerry_create_external_function(read_handler);
   jerry_release_value(jerry_set_property(gpio, prop_name, value));
   jerry_release_value(prop_name);
   jerry_release_value(value);
