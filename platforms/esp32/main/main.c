@@ -26,6 +26,8 @@
 #include "lwip/err.h"
 #include "lwip/sys.h"
 
+#include "driver/gpio.h"
+
 #include "mqtt_client.h"
 
 #include "jerryscript.h"
@@ -34,6 +36,8 @@
 #include "init.h"
 
 #include "mnode_require.h"
+#include "mnode_callback.h"
+// #define MY_DEBUG
 
 #ifdef CONFIG_IDF_TARGET_ESP32
 #define CHIP_NAME "ESP32"
@@ -44,6 +48,8 @@
 #endif
 
 static const char *TAG = "main";
+
+extern QueueHandle_t xQueue;
 
 typedef struct xSemaphoreGroup_s {
     SemaphoreHandle_t code;
@@ -250,6 +256,7 @@ void vfs_init() {
     //   ESP_LOGI(TAG, "File written");
     // }
 }
+
 void load_js_entry() {
     // Open renamed file for reading
     size_t size = 0;
@@ -279,30 +286,39 @@ void init() {
 
     vfs_init();
     load_js_entry();
+    init_callback_queue();
 }
 
 void app_main(void) {
     init();
 
     start_jerry();
-    while (true) {
-        if( xSemaphoreTake( semagroup.code, ( TickType_t ) 10 ) == pdTRUE ) {
-            ESP_LOGI(TAG, "script:\n%s", script);
-            ESP_LOGI(TAG, "script lenth: %u", script_size);
+    if( xSemaphoreTake( semagroup.code, ( TickType_t ) 10 ) == pdTRUE ) {
+        ESP_LOGI(TAG, "script:\n%s", script);
+        ESP_LOGI(TAG, "script lenth: %u", script_size);
 
-            bool run_ok = false;
-
-            run_ok = jerry_eval(script, script_size, JERRY_PARSE_NO_OPTS);
-            if(run_ok) {
+        jerry_value_t parsed_code = jerry_parse (NULL, 0, script, script_size, JERRY_PARSE_NO_OPTS);
+        if (!jerry_value_is_error (parsed_code))
+        {
+            /* Execute the parsed source code in the Global scope */
+            jerry_value_t ret_value = jerry_run (parsed_code);
+            if(!jerry_value_is_error(ret_value)) {
                 ESP_LOGI(TAG, "success\n");
             } else {
                 ESP_LOGI(TAG, "unsuccess\n");
             }
-
-            xSemaphoreGive( semagroup.code );
+            /* Returned value must be freed */
+            jerry_release_value (ret_value);
         }
 
-        vTaskDelay(10000 / portTICK_PERIOD_MS);
+        /* Parsed source code must be freed */
+        jerry_release_value (parsed_code);
+
+        xSemaphoreGive( semagroup.code );
     }
-    end_jerry();
+    while(true) {
+        jerry_value_t cb_fn;
+        xQueueReceive(xQueue, &cb_fn, portMAX_DELAY);
+        call_callback(cb_fn);
+    }
 }
