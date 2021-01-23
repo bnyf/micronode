@@ -1,8 +1,6 @@
-#include "mnode_require.h"
-
 #include <string.h>
 
-#include "jerryscript.h"
+#include "mnode_utils.h"
 #include "jerryscript-ext/handler.h"
 #include "jerryscript-ext/handle-scope.h"
 #include "jerryscript-port.h"
@@ -48,7 +46,7 @@ static jerry_value_t mnode_require_handler(const jerry_value_t func_value, /**< 
   jerry_value_t filename = jerryx_create_handle(jerry_create_string((jerry_char_t *)name));
   jerry_value_t jargs_p[] = { exports, module, filename };
   jerry_value_t jres = jerryx_create_handle(jerry_call_function(res, (jerry_value_t)NULL, jargs_p, 3));
-
+  (void)jres;
   jerry_value_t escaped_exports = jerry_get_property(module, prop_name);
   jerryx_close_handle_scope(scope);
 

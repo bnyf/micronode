@@ -1,21 +1,40 @@
 #ifndef MNODE_CALLBACK_H
 #define MNODE_CALLBACK_H
 
-#include "jerryscript.h"
+#include "mnode_utils.h"
+#include "freertos/FreeRTOS.h"
 
-// typedef struct {
-//     jerry_value_t cb_fn;
-//     mnode_callback *next;
-// } mnode_callback;
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-#define MAX_QUEUE_LENGTH 20
+typedef void(*js_callback_func)(const void *args, uint32_t size);
+typedef BaseType_t(*js_mq_func)(void *args); // send to mq
 
-void init_callback_queue();
+struct js_callback
+{
+    js_callback_func function;
+    struct js_callback *next;
+};
 
-void add_callback(jerry_value_t cb_fn);
+struct js_mq_callback
+{
+    struct js_callback *callback;
+    void *args;
+    uint32_t size;
+};
 
-void call_callback(jerry_value_t cb_fn);
+// void js_callback_init(void);
+struct js_callback *js_add_callback(js_callback_func callback);
+void js_remove_callback(struct js_callback *callback);
+void js_remove_all_callbacks(void);
+void js_call_callback(struct js_callback *callback, const void *data, uint32_t size);
+BaseType_t js_send_callback(struct js_callback *callback, const void *args, uint32_t size);
+void js_mq_func_init(js_mq_func signal);
+void js_mq_func_deinit(void);
 
-void add_callback_from_isr(void* args);
+#ifdef __cplusplus
+}
+#endif
 
 #endif

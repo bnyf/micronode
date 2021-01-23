@@ -3,7 +3,7 @@
 #include "driver/gpio.h"
 #include "jerryscript-port.h"
 
-mnode_status_e mnode_port_set_gpio(int pin_num, int pin_mode, int pull, int intr) { 
+BaseType_t mnode_port_set_gpio(int pin_num, int pin_mode, int pull, int intr) { 
     jerry_port_log(JERRY_LOG_LEVEL_DEBUG,"gpio mode: %d, %d\n",pin_num, pin_mode);
     
     gpio_config_t io_conf;
@@ -33,29 +33,29 @@ mnode_status_e mnode_port_set_gpio(int pin_num, int pin_mode, int pull, int intr
     }
     //configure GPIO with the given settings
     if(gpio_config(&io_conf) == ESP_OK) {
-        return MNODE_OK;
+        return pdPASS;
     }
     else {
-        return MNODE_ERROR;
+        return pdFAIL;
     }
 }
 
-mnode_status_e mnode_port_reset_gpio(int pin_num) {
+BaseType_t mnode_port_reset_gpio(int pin_num) {
     jerry_port_log(JERRY_LOG_LEVEL_DEBUG,"gpio close: %d\n",pin_num);
     gpio_uninstall_isr_service();
     if(gpio_reset_pin(pin_num) == ESP_OK) {
-        return MNODE_OK;
+        return pdPASS;
     } else {
-        return MNODE_ERROR;
+        return pdFAIL;
     }
 }
 
-mnode_status_e mnode_port_gpio_set_level_sync(int pin_num, int pin_level) {
+BaseType_t mnode_port_gpio_set_level_sync(int pin_num, int pin_level) {
     jerry_port_log(JERRY_LOG_LEVEL_DEBUG,"gpio set: %d, %d\n",pin_num, pin_level);
     if(gpio_set_level(pin_num, pin_level) == ESP_OK) {
-        return MNODE_OK;
+        return pdPASS;
     } else {
-        return MNODE_ERROR;
+        return pdFAIL;
     }
 }
 
@@ -63,10 +63,10 @@ int mnode_port_gpio_get_level_sync(int pin_num) {
     return gpio_get_level(pin_num);
 }
 
-mnode_status_e mnode_port_gpio_install_intr(int pin_num, jerry_value_t cb) {
-    if(gpio_isr_handler_add(pin_num, add_callback_from_isr, (void*)cb) == ESP_OK) {
-        return MNODE_OK;
-    } else {
-        return MNODE_ERROR;
-    }
-}
+// BaseType_t mnode_port_gpio_install_intr(int pin_num, jerry_value_t cb) {
+//     if(gpio_isr_handler_add(pin_num, js_add_callback, (void*)cb) == ESP_OK) {
+//         return pdPASS;
+//     } else {
+//         return pdFAIL;
+//     }
+// }

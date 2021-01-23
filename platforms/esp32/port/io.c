@@ -39,7 +39,7 @@ static esp_log_level_t crosslog(jerry_log_level_t level)
 /**
  * Actual log level
  */
-static jerry_log_level_t jerry_port_default_log_level = ESP_LOG_DEBUG;
+static jerry_log_level_t jerry_port_default_log_level = JERRY_LOG_LEVEL_WARNING;
 
 /**
  * Get the log level
