@@ -2,12 +2,42 @@
 #include "freertos/task.h"
 #include "stdlib.h"
 #include "string.h"
+#include "esp_log.h"
 
-static const char *TAG = "mnode_module_httpclient";
+static const char *TAG = "MNODE_HTTPCLIENT";
 #ifdef ESP32_HTTP_PKG
 
+// esp_err_t _http_event_handler(esp_http_client_event_t *evt)
+// {
+//     switch(evt->event_id) {
+//         case HTTP_EVENT_ERROR:
+//             ESP_LOGD(TAG, "HTTP_EVENT_ERROR");
+//             break;
+//         case HTTP_EVENT_ON_CONNECTED:
+//             ESP_LOGD(TAG, "HTTP_EVENT_ON_CONNECTED");
+//             break;
+//         case HTTP_EVENT_HEADER_SENT:
+//             ESP_LOGD(TAG, "HTTP_EVENT_HEADER_SENT");
+//             break;
+//         case HTTP_EVENT_ON_HEADER:
+//             ESP_LOGD(TAG, "HTTP_EVENT_ON_HEADER, key=%s, value=%s", evt->header_key, evt->header_value);
+//             break;
+//         case HTTP_EVENT_ON_DATA:
+//             ESP_LOGD(TAG, "HTTP_EVENT_ON_DATA, len=%d", evt->data_len);
+//             break;
+//         case HTTP_EVENT_ON_FINISH:
+//             ESP_LOGD(TAG, "HTTP_EVENT_ON_FINISH");
+//             break;
+//         case HTTP_EVENT_DISCONNECTED:
+//             ESP_LOGI(TAG, "HTTP_EVENT_DISCONNECTED");
+//             break;
+//     }
+//     return ESP_OK;
+// }
+
+
 void request_callback_func(const void *args, uint32_t size) {
-    jerry_port_log(JERRY_LOG_LEVEL_DEBUG,"%s, modulerequest_callback_func\n",TAG);
+    jerry_port_log(JERRY_LOG_LEVEL_DEBUG, "%s, modulerequest_callback_func\n",TAG);
     request_cbinfo_t *cb_info = (request_cbinfo_t *)args;
     if (cb_info->return_value != (jerry_value_t)NULL) {
         js_emit_event(cb_info->target_value, cb_info->callback_name, &(cb_info->return_value), 1);
@@ -77,33 +107,41 @@ BaseType_t request_combine_header(esp_http_client_handle_t esp_http_client, char
     return ret;
 }
 
-// void request_create_header(esp_http_client_handle_t esp_http_client, jerry_value_t header_value)
+// void request_create_header(request_tdinfo_t* rp, jerry_value_t header_value)
 // {
-//     int enter_index = 0;
-//     int colon_index = 0;
-//     int per_enter_index = -1;
-//     char header_type[256];
-//     char header_info[256];
-    
-//     for (int i = 0 ; i < esp_http_client ; i++)
-//     {
-//         if (session->header->buffer[i] == ':' && per_enter_index != enter_index)
+//     jerry_value_t request_value = rp->request_value;
+//     jerry_value_t header = js_get_property(request_value, "header");
+//     uint8_t header_key_buffer[256];
+//     uint8_t header_value_buffer[256];
+//     memset(header_key_buffer, 0, sizeof(header_key_buffer));
+//     memset(header_value_buffer, 0, sizeof(header_value_buffer));
+//     if(jerry_value_is_array(header)) {
+//         int index;
+//         uint32_t length = jerry_get_array_length(header);
+//         for (index = 0; index < length; index++)
 //         {
-//             colon_index = i;
-//             per_enter_index = enter_index;
-//             memset(header_type, 0, 64);
-//             memset(header_info, 0, 128);
-//             strncpy(header_type, session->header->buffer + enter_index + 1, colon_index - enter_index - 1);
-//             strcpy(header_info, session->header->buffer + colon_index + 2);
-//             jerry_value_t header_info_value = jerry_create_string((jerry_char_t *)header_info);
-//             js_set_property(header_value, header_type, header_info_value);
-//             jerry_release_value(header_info_value);
-//         }
-//         if (session->header->buffer[i] == '\0')
-//         {
-//             enter_index = i;
+//             jerry_value_t item = jerry_get_property_by_index(header, index);
+//             if(jerry_value_is_string(item)) {
+//                 uint32_t len = jerry_get_string_length(item);
+//                 jerry_string_to_char_buffer(item, header_key_buffer, len);
+//                 char *tmp_value = NULL;
+//                 jerry_port_log(JERRY_LOG_LEVEL_DEBUG,"header_key_buffer: %s\n",header_key_buffer);
+//                 esp_err_t ret = esp_http_client_get_header(rp->config->esp_http_client, (char*)header_key_buffer, &tmp_value);
+//                 if(tmp_value != NULL) {
+//                     int tmp_len = strlen(tmp_value);
+//                     jerry_port_log(JERRY_LOG_LEVEL_DEBUG,"%s, tmp_len: %d\n",TAG, tmp_len);
+//                     memcpy(header_value_buffer, tmp_value, tmp_len);
+//                     jerry_port_log(JERRY_LOG_LEVEL_DEBUG,"%s, header_value_buffer: %d, %s",TAG, ret, header_value_buffer);
+//                     jerry_value_t header_info_value = jerry_create_string((jerry_char_t *)header_value_buffer);
+//                     js_value_dump(header_info_value);
+//                     js_set_property(header_value, (char*)header_key_buffer, header_info_value);
+//                     jerry_release_value(header_info_value);
+//                 }
+//             }
+//             jerry_release_value(item);
 //         }
 //     }
+//     jerry_release_value(header);
 // }
 
 BaseType_t request_get_header(esp_http_client_handle_t esp_http_client, jerry_value_t header_value)
@@ -116,6 +154,7 @@ BaseType_t request_get_header(esp_http_client_handle_t esp_http_client, jerry_va
         if (!jerry_value_is_undefined(Host_value))
         {
             host = js_value_to_string(Host_value);
+            esp_http_client_set_header(esp_http_client, "Host", host);
         }
         jerry_release_value(Host_value);
 
@@ -123,6 +162,7 @@ BaseType_t request_get_header(esp_http_client_handle_t esp_http_client, jerry_va
         if (!jerry_value_is_undefined(User_Agent_value))
         {
             user_agent = js_value_to_string(User_Agent_value);
+            esp_http_client_set_header(esp_http_client, "User-Agent", user_agent);
         }
         jerry_release_value(User_Agent_value);
 
@@ -130,6 +170,7 @@ BaseType_t request_get_header(esp_http_client_handle_t esp_http_client, jerry_va
         if (!jerry_value_is_undefined(Content_Type_value))
         {
             content_type = js_value_to_string(Content_Type_value);
+            esp_http_client_set_header(esp_http_client, "Content-Type", content_type);
         }
         jerry_release_value(Content_Type_value);
 
@@ -146,20 +187,17 @@ void request_read_entry(void *p)
     jerry_port_log(JERRY_LOG_LEVEL_DEBUG, "Enter request_read_entry task\n");
     request_tdinfo_t *rp = (request_tdinfo_t *)p;
     int content_length = 0;
+
     if (rp->config->esp_http_client != NULL)
     {
         esp_err_t err = ESP_FAIL;
-        if (rp->config->method == HTTP_METHOD_GET)
+        err = esp_http_client_open(rp->config->esp_http_client, strlen(rp->config->data));
+        jerry_port_log(JERRY_LOG_LEVEL_DEBUG, "Open http client\n");
+        if (rp->config->method == HTTP_METHOD_POST)
         {   
-           err = esp_http_client_open(rp->config->esp_http_client, 0);
-           jerry_port_log(JERRY_LOG_LEVEL_DEBUG, "Open http client\n");
+            esp_http_client_write(rp->config->esp_http_client, rp->config->data, strlen(rp->config->data));
+            jerry_port_log(JERRY_LOG_LEVEL_DEBUG,"%s, post data, %d, %s\n",TAG,strlen(rp->config->data),rp->config->data);
         }
-        else {
-            char buffer[10];
-            itoa(strlen(rp->config->data), buffer, 10);
-            esp_http_client_set_header(rp->config->esp_http_client, "Content-Length", buffer);
-            esp_http_client_set_header(rp->config->esp_http_client, "Content-Type", "application/octet-stream");
-        }        
         if(err == ESP_OK) {
             content_length = esp_http_client_fetch_headers(rp->config->esp_http_client);
             jerry_port_log(JERRY_LOG_LEVEL_DEBUG,"Content_length: %d\n",content_length);
@@ -196,8 +234,8 @@ void request_read_entry(void *p)
         free(complete_info);
     }
     else {
-        unsigned char *buffer = NULL;
-        buffer = ( unsigned char *)malloc(READ_MAX_SIZE + 1);
+        uint8_t *buffer = NULL;
+        buffer = ( uint8_t *)malloc(READ_MAX_SIZE + 1);
         if (!buffer)
         {
             jerry_port_log(JERRY_LOG_LEVEL_ERROR, "no more memory to create read buffer\n");
@@ -239,9 +277,22 @@ void request_read_entry(void *p)
 
             /*  create the jerry_value_t of res  */
             jerry_value_t data_value = jerry_create_string(buffer);
+
+            // debug
+            uint32_t len = jerry_get_string_length(data_value);
+            jerry_port_log(JERRY_LOG_LEVEL_DEBUG,"%s,data_value length: %d\n",TAG, len);
+
+            uint8_t buffer_test[len+1];
+            jerry_string_to_char_buffer(data_value, buffer_test, len);
+            jerry_port_log(JERRY_LOG_LEVEL_DEBUG,"[");
+            for(int i=0;i<len;++i) {
+                jerry_port_log(JERRY_LOG_LEVEL_DEBUG,"%02x ",buffer_test[i]);
+            }
+            jerry_port_log(JERRY_LOG_LEVEL_DEBUG,"]\n");
+
             jerry_port_log(JERRY_LOG_LEVEL_DEBUG, "buffer: %s\n", buffer);
             js_set_property(return_value, "data", data_value);
-            js_value_dump(data_value);
+            // js_value_dump(data_value);
             jerry_release_value(data_value);
 
             jerry_value_t statusCode_value = jerry_create_number(rp->config->response);
@@ -250,9 +301,9 @@ void request_read_entry(void *p)
 
             /*** header's data saved as Object ***/
             // jerry_value_t header_value = jerry_create_object();
-            // request_create_header(rp->config->esp_http_client, header_value);
+            // request_create_header(rp, header_value);
             // js_set_property(return_value, "header", header_value);
-            // jerry_release_value(header_value);
+            // jerry_release_value(header_value);  
 
             esp_http_client_close(rp->config->esp_http_client);
 
@@ -348,15 +399,12 @@ void reqeuset_get_config(request_config_t *config, jerry_value_t requestObj)
     }
     jerry_release_value(method_value);
 
-    
     esp_http_client_config_t esp_http_config = {
         .url = config->url,
         .method = config->method,
+        // .event_handler = _http_event_handler
     };
     config->esp_http_client = esp_http_client_init(&esp_http_config);
-    if(config->method == HTTP_METHOD_POST) {
-        esp_http_client_set_post_field(config->esp_http_client, config->data, sizeof(config->data));
-    }
 
     /* get header */
     jerry_value_t js_header = js_get_property(requestObj, "header");
@@ -375,9 +423,9 @@ DECLARE_HANDLER(request)
     jerry_value_t requestObj = args[0];
     jerry_value_t rqObj = jerry_create_object();
     js_make_emitter(rqObj); //request emitter object
-    jerry_port_log(JERRY_LOG_LEVEL_DEBUG,"request_callback_func addr: %d\n",(int)request_callback_func);
+    jerry_port_log(JERRY_LOG_LEVEL_DEBUG,"%s, request_callback_func addr: %d\n", TAG, (int)request_callback_func);
     struct js_callback *request_callback = js_add_callback(request_callback_func);
-    jerry_port_log(JERRY_LOG_LEVEL_DEBUG,"request_callback_free addr: %d\n",(int)request_callback_free);
+    jerry_port_log(JERRY_LOG_LEVEL_DEBUG,"%s, request_callback_free addr: %d\n", TAG, (int)request_callback_free);
     struct js_callback *close_callback = js_add_callback(request_callback_free);
 
     requeset_add_event_listener(rqObj, requestObj); // requestObj, 用户传入的参数对象
@@ -398,6 +446,7 @@ DECLARE_HANDLER(request)
     rp->request_callback = request_callback;
     rp->close_callback = close_callback;
     rp->target_value = rqObj;
+    rp->request_value = requestObj;
     rp->config = config;
     TaskHandle_t xHandle = NULL;
     xTaskCreate( request_read_entry, "requestRead", 1024*4, (void *)rp, 1, &xHandle );

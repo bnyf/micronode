@@ -42,7 +42,7 @@ BaseType_t mnode_port_set_gpio(int pin_num, int pin_mode, int pull, int intr) {
 
 BaseType_t mnode_port_reset_gpio(int pin_num) {
     jerry_port_log(JERRY_LOG_LEVEL_DEBUG,"gpio close: %d\n",pin_num);
-    gpio_uninstall_isr_service();
+    // gpio_uninstall_isr_service();
     if(gpio_reset_pin(pin_num) == ESP_OK) {
         return pdPASS;
     } else {

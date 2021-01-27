@@ -35,6 +35,7 @@ struct request_config_info
 struct request_thread_info
 {
     jerry_value_t target_value; 
+    jerry_value_t request_value;
     request_config_t *config;
     struct js_callback *request_callback;
     struct js_callback *close_callback;

@@ -1,7 +1,7 @@
-idf_component_register( SRC_DIRS "." "../port" "$ENV{MICRONODE}/libs"
+idf_component_register( SRC_DIRS "." "../port" "$ENV{MICRONODE}/libs" "$ENV{MICRONODE}/deps/list/src"
                         INCLUDE_DIRS "." 
                         PRIV_INCLUDE_DIRS "${JERRYSCRIPT_SOURCE}/jerry-core/include" "${JERRYSCRIPT_SOURCE}/jerry-ext/include" "${JERRYSCRIPT_SOURCE}/jerry-port/default/include"
-                        "$ENV{MICRONODE}/libs" )
+                        "$ENV{MICRONODE}/libs" "$ENV{MICRONODE}/deps/list/src")
 
 # Xtensa processor architecture optimization
 set(EXTERNAL_COMPILE_FLAGS -ffunction-sections -fdata-sections -fstrict-volatile-bitfields -mlongcalls -nostdlib -w)

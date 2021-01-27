@@ -14,9 +14,13 @@ typedef struct {
 /* buildin modules list */
 extern jerry_value_t mnode_init_gpio(void);
 extern jerry_value_t _jerry_request_init(void);
+extern jerry_value_t mnode_init_wifi(void);
+extern jerry_value_t mnode_init_time(void);
 const mnode_builtin_module_t mnode_builtin_module[] = {
   { "gpio", mnode_init_gpio },
-  { "http", _jerry_request_init}
+  { "http", _jerry_request_init },
+  { "wifi", mnode_init_wifi },
+  { "timer", mnode_init_time }
 };
 /* *** */
 

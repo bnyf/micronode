@@ -30,7 +30,7 @@ static void js_emitter_free_cb(void *native)
     }
 
     free(emitter);
-}
+} 
 
 static const jerry_object_native_info_t emitter_type_info =
 {

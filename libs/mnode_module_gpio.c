@@ -24,21 +24,21 @@ static jerry_value_t open_handler(const jerry_value_t func_value, /**< function 
   return jerry_create_boolean(true);
 }
 
-static jerry_value_t reset_handler(const jerry_value_t func_value, /**< function object >*/
-                                  const jerry_value_t this_value, /**< this arg >*/
-                                  const jerry_value_t args[],     /**< function arguments >*/
-                                  const jerry_length_t args_cnt)  /**< number of function arguments >*/
-{
-  jerry_port_log(JERRY_LOG_LEVEL_DEBUG,"close_handler\n");
-  int pin_num = (int)jerry_get_number_value(args[0]);
-  BaseType_t status = mnode_port_reset_gpio(pin_num);
-  if (status != pdPASS)
-  {
-    jerry_port_log(JERRY_LOG_LEVEL_ERROR, "gpio_close error!\n");
-    return jerry_create_boolean(false);
-  }
-  return jerry_create_boolean(true);
-}
+// static jerry_value_t reset_handler(const jerry_value_t func_value, /**< function object >*/
+//                                   const jerry_value_t this_value, /**< this arg >*/
+//                                   const jerry_value_t args[],     /**< function arguments >*/
+//                                   const jerry_length_t args_cnt)  /**< number of function arguments >*/
+// {
+//   jerry_port_log(JERRY_LOG_LEVEL_DEBUG,"close_handler\n");
+//   int pin_num = (int)jerry_get_number_value(args[0]);
+//   BaseType_t status = mnode_port_reset_gpio(pin_num);
+//   if (status != pdPASS)
+//   {
+//     jerry_port_log(JERRY_LOG_LEVEL_ERROR, "gpio_close error!\n");
+//     return jerry_create_boolean(false);
+//   }
+//   return jerry_create_boolean(true);
+// }
 
 static jerry_value_t writeSync_handler(const jerry_value_t func_value, /**< function object */
                                    const jerry_value_t this_value, /**< this arg */
@@ -98,11 +98,11 @@ jerry_value_t mnode_init_gpio()
   jerry_release_value(prop_name);
   jerry_release_value(value);
 
-  prop_name = jerry_create_string((const jerry_char_t *)"reset");
-  value = jerry_create_external_function(reset_handler);
-  jerry_release_value(jerry_set_property(gpio, prop_name, value));
-  jerry_release_value(prop_name);
-  jerry_release_value(value);
+  // prop_name = jerry_create_string((const jerry_char_t *)"reset");
+  // value = jerry_create_external_function(reset_handler);
+  // jerry_release_value(jerry_set_property(gpio, prop_name, value));
+  // jerry_release_value(prop_name);
+  // jerry_release_value(value);
 
   prop_name = jerry_create_string((const jerry_char_t *)"writeSync");
   value = jerry_create_external_function(writeSync_handler);

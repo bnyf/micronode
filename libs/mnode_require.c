@@ -1,4 +1,5 @@
 #include <string.h>
+#include <stdlib.h>
 
 #include "mnode_utils.h"
 #include "jerryscript-ext/handler.h"
@@ -16,16 +17,25 @@ static jerry_value_t mnode_require_handler(const jerry_value_t func_value, /**< 
   jerry_char_t name[strLen + 1];
   jerry_string_to_char_buffer(args[0], name, strLen);
   name[strLen] = '\0';
+  //gpio.js
+  if(strLen > 3 && strcmp((char *)(name + strLen - 3), ".js") == 0) {
+    strLen -= 3;
+    name[strLen] = '\0';
+  }
   jerry_value_t builtin_module = mnode_get_builtin_module((char *)name);
   jerry_port_log(JERRY_LOG_LEVEL_WARNING, "buitin_module_name: %s\n",name);
   if (builtin_module != (jerry_value_t)NULL) {
     return builtin_module;
   }
   
+  
   // not built-in module
+  strcpy((char *)(name + strLen), ".js");
+  char *file_name = malloc(strLen + 20);
+  jerry_port_normalize_path((char*)name, file_name, 1024, "/framework");
   size_t size = 0;
-  jerry_char_t *script = jerry_port_read_source((char *)name, &size);
-
+  jerry_char_t *script = jerry_port_read_source((char *)file_name, &size);
+  free(file_name);
   if (script == NULL || size == 0) { 
     return jerry_create_undefined();
   }

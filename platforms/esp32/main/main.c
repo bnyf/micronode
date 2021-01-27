@@ -84,7 +84,7 @@ extern int jerry_exec(const char*);
 
 void app_main(void) {
     vfs_init();
-    wifi_init();
+    // wifi_init();
     jerry_exec("index.js");
     // http();
 }

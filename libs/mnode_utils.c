@@ -8,10 +8,11 @@
 #include "mnode_utils.h"
 #include "mnode_event.h"
 
+extern int js_event_init(void);
 extern int js_console_init(void);
-extern void js_callback_init(void);
-
+// extern void js_callback_init(void);
 extern void mnode_init_require(void);
+extern void mnode_init_time(void);
 
 static void _js_value_dump(jerry_value_t value);
 
@@ -202,8 +203,9 @@ static void _js_value_dump(jerry_value_t value)
     else if (jerry_value_is_array(value))
     {
         int index;
+        uint32_t length = jerry_get_array_length(value);
         jerry_port_log(JERRY_LOG_LEVEL_TRACE,"[");
-        for (index = 0; index < jerry_get_array_length(value); index ++)
+        for (index = 0; index < length; index ++)
         {
             jerry_value_t item = jerry_get_property_by_index(value, index);
             _js_value_dump(item);
@@ -218,6 +220,19 @@ static void _js_value_dump(jerry_value_t value)
         jerry_port_log(JERRY_LOG_LEVEL_TRACE,"{");
         jerry_foreach_object_property(value, object_dump_foreach, &first_property);
         jerry_port_log(JERRY_LOG_LEVEL_TRACE,"}");
+    }
+    else if(jerry_value_is_arraybuffer(value)) {
+        uint32_t length = jerry_get_arraybuffer_byte_length(value);
+        uint8_t buffer[length+1];
+        uint32_t read_length = jerry_arraybuffer_read(value,0,buffer,length);
+        if(read_length != length) {
+            jerry_port_log(JERRY_LOG_LEVEL_ERROR,"read arraybuffer error!");
+        }
+        jerry_port_log(JERRY_LOG_LEVEL_TRACE,"[");
+        for(int i=0;i<length;++i) {
+            jerry_port_log(JERRY_LOG_LEVEL_TRACE,"%02X ",buffer[i]);
+        }
+        jerry_port_log(JERRY_LOG_LEVEL_TRACE,"]");
     }
     else
     {
@@ -234,9 +249,10 @@ void js_value_dump(jerry_value_t value)
 int js_util_init(void)
 {
     vSemaphoreCreateBinary(xUtilsMutex);
+    js_event_init();
     js_console_init();
     mnode_init_require();
-    js_event_init();
+    mnode_init_time();
     if (_user_init != NULL)
     {
         _user_init();
