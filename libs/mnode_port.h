@@ -3,7 +3,6 @@
 
 #include "jerryscript.h"
 #include "freertos/FreeRTOS.h"
-
 /*
 
 gpio

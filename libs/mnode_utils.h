@@ -11,9 +11,9 @@
                         const jerry_length_t args_cnt )
 
 // # 代表是字符串，## 代表拼接
-#define REGISTER_HANDLER(NAME)      \
+#define REGISTER_HANDLER_GLOBAL(NAME)      \
     jerryx_handler_register_global ( (jerry_char_t *)# NAME, NAME ## _handler)
-#define REGISTER_HANDLER_ALIAS(NAME, HANDLER) \
+#define REGISTER_HANDLER_GLOBAL_ALIAS(NAME, HANDLER) \
     jerryx_handler_register_global ( (jerry_char_t *)# NAME, HANDLER)
 #define REGISTER_METHOD(OBJ, NAME)  \
     js_add_function (OBJ, # NAME, NAME ## _handler)
@@ -57,6 +57,8 @@ bool js_util_lock(void);
 void js_util_unlock(void);
 void js_util_user_init(js_util_user func);
 void js_util_user_cleanup(js_util_user func);
+bool jerry_str_is_utf8(const void* str, int size);
+
 #ifdef __cplusplus
 }
 #endif

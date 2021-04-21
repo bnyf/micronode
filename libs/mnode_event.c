@@ -453,7 +453,7 @@ static void js_event_init_prototype(void)
     }
 }
 
-// 为 obj 对象设置 emitter prototype(相当于父类？)
+// 为 obj 对象设置 emitter prototype
 void js_make_emitter(jerry_value_t obj)
 {
     jerry_port_log(JERRY_LOG_LEVEL_DEBUG,"mnode_event, js_make_emitter\n");
@@ -461,11 +461,12 @@ void js_make_emitter(jerry_value_t obj)
 
     js_event_init_prototype();
     jerry_set_prototype(obj, _js_emitter_prototype);
+    
     emitter = malloc(sizeof(struct js_emitter));
     if (emitter)
     {
         emitter->events = NULL;
-        jerry_port_log(JERRY_LOG_LEVEL_DEBUG,"Jerry set native pointer\n");
+        jerry_port_log(JERRY_LOG_LEVEL_DEBUG, "Jerry set native pointer\n");
         jerry_set_object_native_pointer(obj, emitter, &emitter_type_info);
     }
 }
@@ -482,7 +483,7 @@ DECLARE_HANDLER(Event)
 
 int js_event_init(void)
 {
-    REGISTER_HANDLER(Event);
+    REGISTER_HANDLER_GLOBAL(Event);
     return 0;
 }
 

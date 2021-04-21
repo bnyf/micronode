@@ -30,6 +30,7 @@ externalproject_add(jerryscript_build
     -DCMAKE_NM=${CMAKE_NM}
     -DCMAKE_RANLIB=${CMAKE_RANLIB}
     -DCMAKE_FIND_ROOT_PATH_MODE_PROGRAM=NEVER
+    # -DJERRY_PROFILE=my
 )
 add_dependencies(${COMPONENT_TARGET} jerryscript_build)
 

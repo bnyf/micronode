@@ -6,3 +6,4 @@ sdkconfig
 .VSCodeCounter
 *.bin
 sdkconfig*
+espruino*

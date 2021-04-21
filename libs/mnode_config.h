@@ -5,4 +5,8 @@
 
 #define ESP32_HTTP_PKG
 
+#define CORENUM 2
+
+// #define DEBUG
+
 #endif
