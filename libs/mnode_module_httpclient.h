@@ -1,13 +1,14 @@
 #ifndef MNODE_MODULE_HTTPCLIENT_H
 #define MNODE_MODULE_HTTPCLIENT_H
 
+#include "mnode_builtin.h"
+#if MODULE_HTTP != 0
+
 #include "mnode_utils.h"
 #include "mnode_event.h"
 #include "mnode_callback.h"
 #include "mnode_config.h"
 #include "freertos/FreeRTOS.h"
-
-#ifdef ESP32_HTTP_PKG
 
 #include "esp_http_client.h"
 

@@ -1,3 +1,6 @@
+#include "mnode_builtin.h"
+#if MODULE_HTTP != 0
+
 #include "mnode_module_httpclient.h"
 #include "freertos/task.h"
 #include "stdlib.h"
@@ -5,7 +8,6 @@
 #include "esp_log.h"
 
 static const char *TAG = "MNODE_HTTPCLIENT";
-#ifdef ESP32_HTTP_PKG
 
 void request_callback_func(const void *args, uint32_t size) {
     jerry_port_log(JERRY_LOG_LEVEL_DEBUG, "%s, modulerequest_callback_func\n",TAG);
@@ -394,7 +396,7 @@ int jerry_request_init(jerry_value_t obj)
     return 0;
 }
 
-jerry_value_t _jerry_request_init()
+jerry_value_t mnode_init_http()
 {
     jerry_value_t js_requset = jerry_create_object();
     REGISTER_METHOD_NAME(js_requset, "request", request);
@@ -470,4 +472,3 @@ jerry_value_t _jerry_request_init()
 // }
 
 #endif
-

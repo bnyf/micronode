@@ -1,6 +1,8 @@
+#include "mnode_builtin.h"
+#if MODULE_WIFI != 0
+
 #include "mnode_utils.h"
 #include "jerryscript.h"
-
 #include <string.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -152,3 +154,5 @@ jerry_value_t mnode_init_wifi() {
     REGISTER_METHOD_NAME(wifi, "connect", connect);
     return (wifi);
 }
+
+#endif

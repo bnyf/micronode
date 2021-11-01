@@ -8,8 +8,7 @@
 
 extern jerry_value_t mnode_get_builtin_module(const char *name);
 
-DECLARE_HANDLER(mnode_require)
-{
+DECLARE_HANDLER(mnode_require) {
     jerry_size_t strLen = jerry_get_string_size(args[0]);
     jerry_char_t name[strLen + 1];
     jerry_string_to_char_buffer(args[0], name, strLen);
@@ -44,7 +43,14 @@ DECLARE_HANDLER(mnode_require)
     jerryx_handle_scope scope;
     jerryx_open_handle_scope(&scope);
 
-    static const char *jargs = "exports, module, __filename";
+    /*
+        module = {
+            exports: xxx,
+            __filename: xxx,
+            ... ...
+        }
+    */
+    static const char *jargs = "exports, module, __filename"; // 文件模块的三个参数
     jerry_value_t res = jerryx_create_handle(jerry_parse_function((jerry_char_t *)name, strLen,
                                                                   (jerry_char_t *)jargs, strlen(jargs),
                                                                   (jerry_char_t *)script, size, JERRY_PARSE_NO_OPTS));

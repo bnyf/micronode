@@ -115,11 +115,12 @@ static void jerry_exec_task_entry(void* parameter) {
             js_mq_func_init(js_mq_send);
             js_mq_func_init_isr(js_mq_send_from_isr);
         }
-        TaskHandle_t xHandle_cb[CORENUM];
-        for(int i=0;i<CORENUM - 1;++i) {
-            xTaskCreate( jerry_callback_task_entry, "jerry_callback", 1024 * 16, (void *)filename, 1, &xHandle_cb[i] );
-            configASSERT( xHandle_cb[i] );
-        }
+
+        // TaskHandle_t xHandle_cb[CORENUM];
+        // for(int i=0;i<CORENUM - 1;++i) {
+        //     xTaskCreate( jerry_callback_task_entry, "jerry_callback", 1024 * 16, (void *)filename, 1, &xHandle_cb[i] );
+        //     configASSERT( xHandle_cb[i] );
+        // }
 
         /* Execute the parsed source code in the Global scope */
         jerry_value_t ret = jerry_run(parsed_code);
@@ -138,9 +139,9 @@ static void jerry_exec_task_entry(void* parameter) {
                 }
             }
         }
-        for(int i=0;i<CORENUM - 1;++i) {
-            vTaskDelete( xHandle_cb[i] );
-        }
+        // for(int i=0;i<CORENUM - 1;++i) {
+        //     vTaskDelete( xHandle_cb[i] );
+        // }
         vQueueDelete(xQueue);
         js_mq_func_deinit();
 

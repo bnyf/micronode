@@ -10,15 +10,43 @@ typedef struct
     module_register_fn register_handlder;
 } mnode_builtin_module_t;
 
+#ifndef MODULE_GPIO
+#define MODULE_GPIO 1
+#endif
+
+#ifndef MODULE_HTTP
+#define MODULE_HTTP 1
+#endif
+
+#ifndef MODULE_WIFI
+#define MODULE_WIFI 1
+#endif
+
 /* buildin modules list */
+#if MODULE_GPIO != 0
 extern jerry_value_t mnode_init_gpio(void);
-extern jerry_value_t _jerry_request_init(void);
+#endif
+#if MODULE_HTTP != 0
+extern jerry_value_t mnode_init_http(void);
+#endif
+#if MODULE_WIFI != 0
 extern jerry_value_t mnode_init_wifi(void);
-extern jerry_value_t mnode_init_time(void);
-const mnode_builtin_module_t mnode_builtin_module[] = {
+#endif
+
+static const mnode_builtin_module_t mnode_builtin_module[] = {
+
+#if MODULE_GPIO != 0
     {"gpio", mnode_init_gpio},
-    {"http", _jerry_request_init},
-    {"wifi", mnode_init_wifi}
+#endif
+
+#if MODULE_HTTP != 0
+    {"http", mnode_init_http},
+#endif
+
+#if MODULE_WIFI != 0
+    {"wifi", mnode_init_wifi},
+#endif
+
 };
 /* *** */
 
@@ -29,7 +57,7 @@ typedef struct
 
 /* *** */
 
-const int mnode_builtin_modules_count = sizeof(mnode_builtin_module) / sizeof(mnode_builtin_module_t);
+static const int mnode_builtin_modules_count = sizeof(mnode_builtin_module) / sizeof(mnode_builtin_module_t);
 
 mnode_builtin_objects_t mnode_module_objects[sizeof(mnode_builtin_module) / sizeof(mnode_builtin_module_t)];
 

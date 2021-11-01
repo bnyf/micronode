@@ -1,3 +1,6 @@
+#include "mnode_builtin.h"
+#if MODULE_GPIO != 0
+
 #include "mnode_port.h"
 #include "mnode_module_gpio.h"
 #include "mnode_callback.h"
@@ -130,3 +133,6 @@ jerry_value_t mnode_init_gpio()
 
     return gpio;
 }
+
+
+#endif

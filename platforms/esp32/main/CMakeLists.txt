@@ -36,8 +36,9 @@ add_dependencies(${COMPONENT_TARGET} jerryscript_build)
 
 set(COMPONENT_BUILD_PATH ${CMAKE_BINARY_DIR}/esp-idf/${COMPONENT_NAME}/jerryscript)
 
+
+
 target_link_libraries(${COMPONENT_TARGET}
                       ${COMPONENT_BUILD_PATH}/lib/libjerry-core.a
                       ${COMPONENT_BUILD_PATH}/lib/libjerry-ext.a
                       ${COMPONENT_BUILD_PATH}/lib/libjerry-port-default-minimal.a)
-
