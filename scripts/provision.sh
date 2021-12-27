@@ -9,9 +9,15 @@ then
 fi
 
 BOARDNAME=$1
+source ${MICRONODE}/deps/esp-idf/export.sh
+PATH=$PATH:{MICRONODE}/scripts/
 
 if [ "$BOARDNAME" = "esp32" ]; then
     echo "===== ESP32"
     export MKSPIFFS=${MICRONODE}/platforms/esp32/mkspiffs
-    source ${MICRONODE}/platforms/esp32/esp-idf/export.sh
+fi
+
+if [ "$BOARDNAME" = "esp32c3" ]; then
+    echo "===== ESP32C3"
+    export MKSPIFFS=${MICRONODE}/platforms/esp32c3/mkspiffs
 fi
